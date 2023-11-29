@@ -1,6 +1,5 @@
 //Hooks
 import { useState, useEffect } from "react";
-
 //Services
 import personsService from "./services/persons";
 //Components
@@ -15,17 +14,19 @@ const App = () => {
  const [persons, setPersons] = useState([]);
 
  //State for input
+ const [filter, setFilter] = useState("");
  const [newName, setNewName] = useState("");
  const [newNumber, setNewNumber] = useState("");
- const [filter, setFilter] = useState("");
  const [successMessage, setSuccessMessage] = useState(null);
  const [errorMessage, setErrorMessage] = useState(null);
+
+ //Variables
 
  useEffect(() => {
   personsService.getAll().then((persons) => {
    setPersons(persons);
   });
- }, [persons]);
+ }, []);
 
  const addData = (e) => {
   e.preventDefault();
@@ -51,6 +52,8 @@ const App = () => {
          result.id != person.id ? person : returnedPerson
         )
        );
+       setNewName("");
+       setNewNumber("");
        setSuccessMessage(
         `Update ${returnedPerson.name} with the number ${returnedPerson.number}`
        );
@@ -59,39 +62,56 @@ const App = () => {
        }, 5000);
       })
       .catch((error) => {
-       setErrorMessage(
-        `Information of'${newPerson.name}' was already deleted from server`
-       );
-       setPersons(
-        persons.map((person) =>
-         result.id != person.id ? person : returnedPerson
-        )
-       );
+       // this is the way to access the error message
+       setErrorMessage(error.response.data.error);
+       setTimeout(() => {
+        setErrorMessage(null);
+       }, 5000);
       });
     }
    } else {
-    personsService.create(newPerson).then((returnedPerson) => {
-     setPersons([...persons, returnedPerson]);
-     setNewName("");
-     setNewNumber("");
-     setSuccessMessage(`Added ${returnedPerson.name}`);
-     setTimeout(() => {
-      setSuccessMessage(null);
-     }, 5000);
-    });
+    personsService
+     .create(newPerson)
+     .then((returnedPerson) => {
+      setPersons([...persons, returnedPerson]);
+      setNewName("");
+      setNewNumber("");
+      setSuccessMessage(`Added ${returnedPerson.name}`);
+      setTimeout(() => {
+       setSuccessMessage(null);
+      }, 5000);
+     })
+     .catch((error) => {
+      // this is the way to access the error message
+      setErrorMessage(error.response.data.error);
+      setTimeout(() => {
+       setErrorMessage(null);
+      }, 5000);
+     });
    }
   }
  };
 
- const removeData = (person) => {
-  if (window.confirm(`Delete ${person.name}`)) {
-   personsService.remove(person.id);
+ const removeData = (personToRemove) => {
+  if (window.confirm(`Delete ${personToRemove.name}`)) {
+   personsService.remove(personToRemove.id);
+
+   const newPersons = persons.filter(
+    (person) => personToRemove.id !== person.id
+   );
+
+   setPersons(newPersons);
+   setSuccessMessage(`Deleted ${personToRemove.name}`);
+   setTimeout(() => {
+    setSuccessMessage(null);
+   }, 5000);
   }
  };
 
  const handleNameChange = (event) => {
   setNewName(event.target.value);
  };
+
  const handleNumberChange = (event) => {
   setNewNumber(event.target.value);
  };
@@ -112,8 +132,10 @@ const App = () => {
    <h3>Add a new</h3>
    <PersonForm
     addData={addData}
+    newName={newName}
+    newNumber={newNumber}
     handleNameChange={handleNameChange}
-    handlePhoneChange={handleNumberChange}
+    handleNumberChange={handleNumberChange}
    />
    <h2>Numbers</h2>
    <Persons filterPerson={filterPerson} removeData={removeData} />
